@@ -28,7 +28,7 @@ a.go,.go.sec{background:var(--soft)}
 <canvas id="c"></canvas>
 <div class="ov" id="ov"><h1 id="t">Лови рыбок 🐟</h1><p id="d">Води котом пальцем и лови рыбок в такт музыке. Креветки 🦐 дают бонус. Промах по рыбке отнимает здоровье и комбо. Игра бесконечная: чем дольше играешь, тем быстрее и плотнее рыбки.</p><button class="go" id="go">Играть</button><button class="go sec" id="rank">🏆 Рейтинг</button><a class="go" href="index.html">На главную</a></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="cloud.js?v=5"></script>
+<script src="cloud.js?v=6"></script>
 <script>
 var AC=null,master=null,mute=false;try{mute=localStorage.getItem("mute")==="1"}catch(e){}
 function audio(){try{if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=mute?0:1;master.connect(AC.destination)}if(AC.state==="suspended")AC.resume()}catch(e){AC=null}return AC}

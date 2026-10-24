@@ -87,7 +87,7 @@ button.cat.on{border-color:var(--ink)}
 </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="cloud.js?v=5"></script>
+<script src="cloud.js?v=6"></script>
 <script src="tasks.js?v=1"></script>
 <script>
 function catSVG(c,withEyes,hat){
@@ -229,7 +229,8 @@ function look(x,y){
 
 var CL=window.Cloud||{data:{},save:function(){},onChange:function(){},openLogin:function(){alert("Вход недоступен")}};
 var TASKS=window.TASKS||[];
-function hatOn(){var h=CL.data.hat;return TASKS.some(function(k){return k.h===h&&(CL.data[k.k]||0)>=k.n})?h:""}
+function isDone(k){return (CL.data[k.k]||0)>=k.n||(CL.data.gifts||"").indexOf(k.h)>-1}
+function hatOn(){var h=CL.data.hat;return TASKS.some(function(k){return k.h===h&&isDone(k)})?h:""}
 var stage=document.getElementById("stage"),modal=document.getElementById("modal"),countEl=document.getElementById("count");
 var pets=cats.map(function(){return 0}),cur=0,pupils=[],lastFocus=null;
 
@@ -271,11 +272,13 @@ var tm=document.getElementById("tmodal"),tList=document.getElementById("tlist"),
 function renderTasks(){
   var d=CL.data;
   tList.innerHTML=TASKS.map(function(k,i){
-    var v=Math.min(d[k.k]||0,k.n),ok=v>=k.n,on=d.hat===k.h;
-    return '<div class="task'+(on?' on':'')+'"><span class="rw">'+(ok?k.h:'🔒')+'</span><span>'+k.t+'<small>'+v+' / '+k.n+(ok?' · награда получена':'')+'</small></span><button data-i="'+i+'"'+(ok?'':' disabled')+'>'+(on?'Снять':'Надеть')+'</button></div>';
-  }).join("");
+    var v=Math.min(d[k.k]||0,k.n),ok=isDone(k),on=d.hat===k.h;
+    return '<div class="task'+(on?' on':'')+'"><span class="rw">'+(ok?k.h:'🔒')+'</span><span>'+k.t+'<small>'+v.toLocaleString("ru-RU")+' / '+k.n.toLocaleString("ru-RU")+(ok?' · награда получена':'')+'</small></span><button data-i="'+i+'"'+(ok?'':' disabled')+'>'+(on?'Снять':'Надеть')+'</button></div>';
+  }).join("")+(CL.admin?'<div class="task"><span class="rw">🔧</span><span>Режим админа<small>видно только тебе</small></span><span><button data-g="all">Выдать все</button> <button data-g="none">Забрать</button></span></div>':'');
 }
 tList.addEventListener("click",function(e){
+  var g=e.target.closest("button[data-g]");
+  if(g&&CL.admin){CL.data.gifts=g.dataset.g==="all"?TASKS.map(function(k){return k.h}).join(""):"";CL.save(true);renderTasks();setCat(cur);return}
   var b=e.target.closest("button[data-i]");if(!b||b.disabled)return;
   var h=TASKS[+b.dataset.i].h;CL.data.hat=CL.data.hat===h?"":h;CL.save(true);renderTasks();setCat(cur);
 });

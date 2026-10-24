@@ -1,7 +1,7 @@
 /* Облачное сохранение прогресса (Supabase). Публичный ключ можно хранить в коде. */
 (function(){
 var URL_="https://njrfjmfeewnabketacjy.supabase.co",KEY="sb_publishable_c-ZeiFc_dRSD3Mldxv365w_NPqBWWSu";
-var LS="murmur_progress",C={user:null,data:{},cbs:[],status:""},sb=null,timer=null,lastUid=null;
+var LS="murmur_progress",C={user:null,data:{},cbs:[],status:"",admin:false},sb=null,timer=null,lastUid=null;
 try{sb=window.supabase.createClient(URL_,KEY)}catch(e){}
 try{C.data=JSON.parse(localStorage.getItem(LS))||{}}catch(e){}
 function merge(a,b){
@@ -31,9 +31,12 @@ function pull(){
     C.data=merge(C.data,r.data&&r.data.data);C.save(true);emit();if(C.syncPets)C.syncPets();
   });
 }
+function checkAdmin(){
+  sb.from("admins").select("user_id").maybeSingle().then(function(r){C.admin=!!(r&&r.data);emit()});
+}
 function setUser(u){
   C.user=u||null;
-  if(C.user&&sb)pull();
+  if(C.user&&sb){pull();checkAdmin()}else C.admin=false;
   emit();
 }
 if(sb){
