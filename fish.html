@@ -28,7 +28,7 @@ a.go,.go.sec{background:var(--soft)}
 <canvas id="c"></canvas>
 <div class="ov" id="ov"><h1 id="t">Лови рыбок 🐟</h1><p id="d">Води котом пальцем и лови рыбок в такт музыке. Креветки 🦐 дают бонус. Промах по рыбке отнимает здоровье и комбо. Игра бесконечная: чем дольше играешь, тем быстрее и плотнее рыбки.</p><button class="go" id="go">Играть</button><button class="go sec" id="rank">🏆 Рейтинг</button><a class="go" href="index.html">На главную</a></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="cloud.js"></script>
+<script src="cloud.js?v=5"></script>
 <script>
 var AC=null,master=null,mute=false;try{mute=localStorage.getItem("mute")==="1"}catch(e){}
 function audio(){try{if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=mute?0:1;master.connect(AC.destination)}if(AC.state==="suspended")AC.resume()}catch(e){AC=null}return AC}
@@ -100,7 +100,7 @@ function finish(){
   if(sg){sg.gain.cancelScheduledValues(0);sg.gain.value=0;sg=null}
   var cl=window.Cloud;if(cl)best=Math.max(best,cl.data.fishBest||0);
   if(score>best){best=score;try{localStorage.setItem("fishBest2",best)}catch(e){}}
-  if(cl){if(score>=(cl.data.fishBest||0))cl.data.fishLevel=lvl;cl.data.fishBest=Math.max(cl.data.fishBest||0,score);cl.save(true);cl.submitScore(cl.data.fishBest,cl.data.fishLevel)}
+  if(cl){if(score>=(cl.data.fishBest||0))cl.data.fishLevel=lvl;cl.data.fishBest=Math.max(cl.data.fishBest||0,score);cl.data.fishMaxLevel=Math.max(cl.data.fishMaxLevel||0,lvl);cl.data.fishCombo=Math.max(cl.data.fishCombo||0,maxc);cl.save(true);cl.submitScore(cl.data.fishBest,cl.data.fishLevel)}
   var acc=seen?Math.round(hits/seen*100):0;
   document.getElementById("t").textContent="Кот проголодался";
   document.getElementById("d").textContent="Уровень "+lvl+". Очки: "+score+". Рекорд: "+best+". Макс. комбо: "+maxc+". Поймано рыбок: "+hits+" из "+seen+" ("+acc+"%).";

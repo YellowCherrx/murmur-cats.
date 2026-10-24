@@ -83,11 +83,12 @@ button.cat.on{border-color:var(--ink)}
 <div class="panel" role="dialog" aria-modal="true" aria-labelledby="tt">
 <div class="ph"><h2 id="tt">Задания</h2><button class="x" id="tclose" aria-label="Закрыть">✕</button></div>
 <div id="tlist"></div>
-<p class="soon">Выполняй задания и открывай шляпки для главного кота.</p>
+<p class="soon">Выполняй задания и получай награды для главного кота.</p>
 </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="cloud.js"></script>
+<script src="cloud.js?v=5"></script>
+<script src="tasks.js?v=1"></script>
 <script>
 function catSVG(c,withEyes,hat){
   var b=c.body,e=c.ear,m=c.mask||b,br=c.breed||"";
@@ -227,6 +228,8 @@ function look(x,y){
 }
 
 var CL=window.Cloud||{data:{},save:function(){},onChange:function(){},openLogin:function(){alert("Вход недоступен")}};
+var TASKS=window.TASKS||[];
+function hatOn(){var h=CL.data.hat;return TASKS.some(function(k){return k.h===h&&(CL.data[k.k]||0)>=k.n})?h:""}
 var stage=document.getElementById("stage"),modal=document.getElementById("modal"),countEl=document.getElementById("count");
 var pets=cats.map(function(){return 0}),cur=0,pupils=[],lastFocus=null;
 
@@ -238,7 +241,7 @@ var cards=document.querySelectorAll("button.cat");
 function updCount(){countEl.textContent="Всего поглаживаний: "+(CL.data.pets||0).toLocaleString("ru-RU")}
 function setCat(i){
   cur=i;
-  stage.innerHTML=catSVG(cats[i].c,true,CL.data.hat);
+  stage.innerHTML=catSVG(cats[i].c,true,hatOn());
   stage.setAttribute("aria-label","Погладить: "+cats[i].n);
   document.getElementById("who").textContent=cats[i].n;
   document.getElementById("breed").textContent=cats[i].p+" · "+cats[i].d;
@@ -264,12 +267,6 @@ stage.addEventListener("click",function(){
   s.animate([{transform:"scale(1)"},{transform:"scale(1.04,.96)"},{transform:"scale(1)"}],{duration:300});
   purr();burst();
 });
-var TASKS=[
- {t:"Погладь кота 50 раз",h:"🎀",k:"pets",n:50},
- {t:"Погладь кота 200 раз",h:"🌸",k:"pets",n:200},
- {t:"Набери 3000 очков в «Лови рыбок»",h:"👑",k:"fishBest",n:3000},
- {t:"Набери 20 очков в «Поймай мышку»",h:"🎩",k:"miceBest",n:20}
-];
 var tm=document.getElementById("tmodal"),tList=document.getElementById("tlist"),tLast=null;
 function renderTasks(){
   var d=CL.data;
@@ -290,8 +287,8 @@ tm.addEventListener("click",function(e){if(e.target===tm)closeT()});
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!tm.hidden)closeT()});
 document.getElementById("board").addEventListener("click",function(){if(CL.openBoard)CL.openBoard("pets")});
 document.getElementById("aopen").addEventListener("click",function(){CL.openLogin()});
-var lastHat=CL.data.hat;
-CL.onChange(function(){renderTasks();updCount();if(CL.data.hat!==lastHat){lastHat=CL.data.hat;setCat(cur)}});
+var lastHat=hatOn();
+CL.onChange(function(){renderTasks();updCount();if(hatOn()!==lastHat){lastHat=hatOn();setCat(cur)}});
 var games=[
  {n:"Лови рыбок",e:"🐟",d:"Рыбки падают, кот ловит",f:"fish.html"},
  {n:"Поймай мышку",e:"🐭",d:"Мышки лезут из норок",f:"mice.html"}
