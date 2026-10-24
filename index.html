@@ -42,6 +42,12 @@ button.cat.on{border-color:var(--ink)}
 .gem{display:block;font-size:3.2rem;line-height:1;padding:14px 0;border-radius:16px;background:var(--soft)}
 .badge{display:inline-block;margin-top:8px;padding:2px 10px;border-radius:999px;background:var(--pink);font-size:.8rem;font-weight:500}
 .soon{text-align:center;color:var(--muted);margin:14px 0 0;min-height:1.4em}
+.task{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px;border:2px solid var(--line);border-radius:18px;margin-bottom:10px;text-align:left}
+.task .rw{font-size:2rem;min-width:2.4rem;text-align:center}
+.task small{display:block;color:var(--muted)}
+.task button{font:inherit;font-weight:500;border:0;border-radius:999px;padding:8px 16px;background:var(--pink);color:var(--ink);cursor:pointer}
+.task button[disabled]{background:var(--soft);color:var(--muted);cursor:default}
+.task.on{border-color:var(--ink)}
 .pupil{transition:transform .06s}
 #head{transform-origin:110px 172px;transition:transform .18s ease-out}
 #face{transition:transform .18s ease-out}
@@ -49,7 +55,7 @@ button.cat.on{border-color:var(--ink)}
 </style>
 </head>
 <body>
-<header><span>🐾 Мур-мур</span><div class="hbtns"><button class="open alt" id="gopen" aria-haspopup="dialog">🎮 Игры</button><button class="open" id="open" aria-haspopup="dialog">Каталог котов</button></div></header>
+<header><span>🐾 Мур-мур</span><div class="hbtns"><button class="open alt" id="aopen" aria-label="Аккаунт">👤</button><button class="open alt" id="topen" aria-haspopup="dialog">🏆 Задания</button><button class="open alt" id="gopen" aria-haspopup="dialog">🎮 Игры</button><button class="open" id="open" aria-haspopup="dialog">Каталог котов</button></div></header>
 <main>
 <button id="stage"></button>
 <div class="floor"></div>
@@ -72,8 +78,17 @@ button.cat.on{border-color:var(--ink)}
 <p class="soon" id="soon" aria-live="polite"></p>
 </div>
 </div>
+<div class="overlay" id="tmodal" hidden>
+<div class="panel" role="dialog" aria-modal="true" aria-labelledby="tt">
+<div class="ph"><h2 id="tt">Задания</h2><button class="x" id="tclose" aria-label="Закрыть">✕</button></div>
+<div id="tlist"></div>
+<p class="soon">Выполняй задания и открывай шляпки для главного кота.</p>
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="cloud.js"></script>
 <script>
-function catSVG(c,withEyes){
+function catSVG(c,withEyes,hat){
   var b=c.body,e=c.ear,m=c.mask||b,br=c.breed||"";
   var hid=withEyes?' id="head"':'',fid=withEyes?' id="face"':'';
   var eyes=withEyes
@@ -109,6 +124,7 @@ function catSVG(c,withEyes){
     s+='<path d="M110 36 V56 M92 40 L96 58 M128 40 L124 58" stroke="'+c.stripes+'" stroke-width="7" stroke-linecap="round"/>';
   }
   if(c.mask)s+=(br==="maine"?'<rect x="64" y="108" width="92" height="58" rx="28" fill="'+c.mask+'"/>':'<ellipse cx="110" cy="132" rx="46" ry="34" fill="'+c.mask+'"/>');
+  if(hat)s+='<text x="110" y="24" font-size="46" text-anchor="middle">'+hat+'</text>';
   s+='<g'+fid+'>'+eyes+(br==="maine"?'<path d="M60 74 L100 84 M160 74 L120 84" stroke="#9a98bd" stroke-width="5" stroke-linecap="round" fill="none"/>':'')+
      '<ellipse cx="56" cy="120" rx="12" ry="7" fill="#ff8fb1" opacity=".5"/><ellipse cx="164" cy="120" rx="12" ry="7" fill="#ff8fb1" opacity=".5"/>'+
      (withEyes?'<g id="happy" style="display:none"><path d="M67 99 Q80 83 93 99 M127 99 Q140 83 153 99" stroke="#1d1b3a" stroke-width="5" fill="none" stroke-linecap="round"/></g>':'')+
@@ -209,6 +225,7 @@ function look(x,y){
   pupils.forEach(function(p){p.style.transform="translate("+nx*4+"px,"+ny*4+"px)"});
 }
 
+var CL=window.Cloud||{data:{},save:function(){},onChange:function(){},openLogin:function(){alert("Вход недоступен")}};
 var stage=document.getElementById("stage"),modal=document.getElementById("modal"),countEl=document.getElementById("count");
 var pets=cats.map(function(){return 0}),cur=0,pupils=[],lastFocus=null;
 
@@ -220,7 +237,7 @@ var cards=document.querySelectorAll("button.cat");
 function updCount(){var n=pets[cur];countEl.textContent=n?("Поглаживаний: "+n+(n>=10?" — кот в восторге":"")):"";}
 function setCat(i){
   cur=i;
-  stage.innerHTML=catSVG(cats[i].c,true);
+  stage.innerHTML=catSVG(cats[i].c,true,CL.data.hat);
   stage.setAttribute("aria-label","Погладить: "+cats[i].n);
   document.getElementById("who").textContent=cats[i].n;
   document.getElementById("breed").textContent=cats[i].p+" · "+cats[i].d;
@@ -241,11 +258,38 @@ window.addEventListener("pointermove",function(e){look(e.clientX,e.clientY)});
 window.addEventListener("pointerdown",function(e){look(e.clientX,e.clientY)});
 
 stage.addEventListener("click",function(){
-  pets[cur]++;updCount();
+  pets[cur]++;updCount();CL.data.pets=(CL.data.pets||0)+1;CL.save();
   var s=stage.querySelector("svg");
   s.animate([{transform:"scale(1)"},{transform:"scale(1.04,.96)"},{transform:"scale(1)"}],{duration:300});
   purr();burst();
 });
+var TASKS=[
+ {t:"Погладь кота 50 раз",h:"🎀",k:"pets",n:50},
+ {t:"Погладь кота 200 раз",h:"🌸",k:"pets",n:200},
+ {t:"Набери 3000 очков в «Лови рыбок»",h:"👑",k:"fishBest",n:3000},
+ {t:"Набери 20 очков в «Поймай мышку»",h:"🎩",k:"miceBest",n:20}
+];
+var tm=document.getElementById("tmodal"),tList=document.getElementById("tlist"),tLast=null;
+function renderTasks(){
+  var d=CL.data;
+  tList.innerHTML=TASKS.map(function(k,i){
+    var v=Math.min(d[k.k]||0,k.n),ok=v>=k.n,on=d.hat===k.h;
+    return '<div class="task'+(on?' on':'')+'"><span class="rw">'+(ok?k.h:'🔒')+'</span><span>'+k.t+'<small>'+v+' / '+k.n+(ok?' · награда получена':'')+'</small></span><button data-i="'+i+'"'+(ok?'':' disabled')+'>'+(on?'Снять':'Надеть')+'</button></div>';
+  }).join("");
+}
+tList.addEventListener("click",function(e){
+  var b=e.target.closest("button[data-i]");if(!b||b.disabled)return;
+  var h=TASKS[+b.dataset.i].h;CL.data.hat=CL.data.hat===h?"":h;CL.save(true);renderTasks();setCat(cur);
+});
+function openT(){tLast=document.activeElement;renderTasks();tm.hidden=false;document.body.style.overflow="hidden";document.getElementById("tclose").focus()}
+function closeT(){tm.hidden=true;document.body.style.overflow="";if(tLast)tLast.focus()}
+document.getElementById("topen").addEventListener("click",openT);
+document.getElementById("tclose").addEventListener("click",closeT);
+tm.addEventListener("click",function(e){if(e.target===tm)closeT()});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!tm.hidden)closeT()});
+document.getElementById("aopen").addEventListener("click",function(){CL.openLogin()});
+var lastHat=CL.data.hat;
+CL.onChange(function(){renderTasks();if(CL.data.hat!==lastHat){lastHat=CL.data.hat;setCat(cur)}});
 var games=[
  {n:"Лови рыбок",e:"🐟",d:"Рыбки падают, кот ловит",f:"fish.html"},
  {n:"Поймай мышку",e:"🐭",d:"Мышки лезут из норок",f:"mice.html"}

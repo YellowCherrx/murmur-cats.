@@ -26,6 +26,8 @@ button.go{font:inherit;font-weight:500;font-size:1.2rem;border:0;border-radius:9
 <div class="bar"><i id="hp"></i></div>
 <canvas id="c"></canvas>
 <div class="ov" id="ov"><h1 id="t">Лови рыбок 🐟</h1><p id="d">Води котом пальцем и лови рыбок в такт музыке. Креветки 🦐 дают бонус. Промахнулся по рыбке: теряешь здоровье и комбо.</p><button class="go" id="go">Играть</button></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="cloud.js"></script>
 <script>
 var AC=null,master=null,mute=false;try{mute=localStorage.getItem("mute")==="1"}catch(e){}
 function audio(){try{if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=mute?0:1;master.connect(AC.destination)}if(AC.state==="suspended")AC.resume()}catch(e){AC=null}return AC}
@@ -86,7 +88,9 @@ function finish(win){
   act=[];
   run=false;
   if(sg){sg.gain.cancelScheduledValues(0);sg.gain.value=0;sg=null}
+  var cl=window.Cloud;if(cl)best=Math.max(best,cl.data.fishBest||0);
   if(score>best){best=score;try{localStorage.setItem("fishBest2",best)}catch(e){}}
+  if(cl){cl.data.fishBest=Math.max(cl.data.fishBest||0,score);cl.save(true)}
   var acc=hits/total,gr=!win?"Провал":acc>=.95?"S":acc>=.85?"A":acc>=.7?"B":"C";
   document.getElementById("t").textContent=win?"Оценка: "+gr:"Кот проголодался";
   document.getElementById("d").textContent="Очки: "+score+". Рекорд: "+best+". Макс. комбо: "+maxc+". Поймано рыбок: "+hits+" из "+total+" ("+Math.round(acc*100)+"%).";

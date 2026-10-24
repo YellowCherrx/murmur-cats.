@@ -29,6 +29,8 @@ button.go{font:inherit;font-weight:500;font-size:1.2rem;border:0;border-radius:9
 <header><a href="index.html">← Главная</a><span id="sc">Очки: 0</span><span id="tm">⏱ 30</span><button class="snd" id="snd" aria-label="Выключить звук">🔊</button></header>
 <main><div class="board" id="board"></div></main>
 <div class="ov" id="ov"><h1 id="t">Поймай мышку 🐭</h1><p id="d">Тапай по мышкам! Сыр 🧀 даёт 3 очка, а огурцов 🥒 кот боится: за них минус 2.</p><button class="go" id="go">Играть</button></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="cloud.js"></script>
 <script>
 var AC=null,mute=false;try{mute=localStorage.getItem("mute")==="1"}catch(e){}
 function tone(f1,f2,d,type,vol,delay){
@@ -90,7 +92,9 @@ function finish(){
   run=false;clearInterval(timer);
   tone(523,523,.12,"sine",.2);tone(659,659,.12,"sine",.2,.12);tone(784,784,.12,"sine",.2,.24);tone(1047,1047,.3,"sine",.2,.36);
   for(var i=0;i<9;i++)hide(i);
+  var cl=window.Cloud;if(cl)best=Math.max(best,cl.data.miceBest||0);
   if(score>best){best=score;try{localStorage.setItem("miceBest",best)}catch(e){}}
+  if(cl){cl.data.miceBest=Math.max(cl.data.miceBest||0,score);cl.save(true)}
   document.getElementById("t").textContent="Время вышло!";
   document.getElementById("d").textContent="Твои очки: "+score+". Рекорд: "+best+".";
   document.getElementById("go").textContent="Ещё раз";ov.hidden=false;
