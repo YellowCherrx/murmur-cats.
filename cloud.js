@@ -41,7 +41,7 @@ if(sb){
   sb.auth.onAuthStateChange(function(ev,s){setUser(s&&s.user)});
 }
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
-C.openLogin=function(){
+function ensureCss(){
   if(!document.getElementById("cl-css")){
     var st=document.createElement("style");st.id="cl-css";
     st.textContent=".cl-ov{position:fixed;inset:0;background:rgba(29,27,58,.45);display:grid;place-items:center;padding:20px;z-index:50;font-family:Fredoka,system-ui,sans-serif}"+
@@ -49,9 +49,66 @@ C.openLogin=function(){
     ".cl-p h2{margin:0}.cl-p p{margin:0;color:#6b6890}"+
     ".cl-x{position:absolute;right:12px;top:12px;width:36px;height:36px;border:0;border-radius:50%;background:#f6f1fd;cursor:pointer;font-size:1rem}"+
     ".cl-b{font:inherit;font-weight:500;border:0;border-radius:999px;padding:12px 18px;background:#ff8fb1;color:#1d1b3a;cursor:pointer}"+
-    ".cl-g{background:#f6f1fd}.cl-i{font:inherit;padding:12px 14px;border:2px solid #ece7f7;border-radius:14px}.cl-m{min-height:1.3em}";
+    ".cl-g{background:#f6f1fd}.cl-i{font:inherit;padding:12px 14px;border:2px solid #ece7f7;border-radius:14px}.cl-m{min-height:1.3em}"+
+    ".cl-l{max-height:46vh;overflow:auto;display:grid;gap:2px;margin:0;padding:0;list-style:none}.cl-r{display:grid;grid-template-columns:2.4rem 1fr auto;gap:8px;padding:6px 8px;border-radius:12px;color:#1d1b3a}.cl-r.me{background:#f6f1fd;font-weight:700}";
     document.head.appendChild(st);
   }
+}
+C.nick=function(){
+  if(!C.data.name){C.data.name="Котик "+(100+Math.floor(Math.random()*900));C.save()}
+  return C.data.name;
+};
+C.submitScore=function(score,level){
+  if(!sb||!C.user||!(score>0))return Promise.resolve();
+  return Promise.resolve(sb.rpc("submit_score",{p_name:C.nick(),p_score:Math.floor(score),p_level:level||1})).then(function(r){
+    if(r&&r.error){C.status="Не удалось отправить в рейтинг";emit()}
+  });
+};
+C.openBoard=function(){
+  ensureCss();
+  var m=document.createElement("div");m.className="cl-ov";document.body.appendChild(m);
+  var rows=null,rank=null;
+  function close(){m.remove()}
+  function render(msg){
+    var u=C.user,me=u&&u.id;
+    m.innerHTML='<div class="cl-p" role="dialog" aria-modal="true" aria-label="Рейтинг"><button class="cl-x" data-a="close" aria-label="Закрыть">✕</button><h2>🏆 Рейтинг: рыбки</h2>'+
+      (rows===null?'<p>Загружаю…</p>':rows.length?'<ol class="cl-l">'+rows.map(function(r,i){return '<li class="cl-r'+(r.user_id===me?' me':'')+'"><span>#'+(i+1)+'</span><span>'+esc(r.name)+' · ур. '+(r.level||1)+'</span><span>'+r.score+'</span></li>'}).join("")+'</ol>':'<p>Пока никого нет. Стань первым!</p>')+
+      (u?'<p>Твой рекорд: '+(C.data.fishBest||0)+(rank?' · место '+rank:'')+'</p><input class="cl-i" maxlength="16" value="'+esc(C.nick())+'" aria-label="Ник"><button class="cl-b" data-a="nick">Сменить ник</button>':
+         '<p>Чтобы попасть в рейтинг, нужен аккаунт.</p><button class="cl-b" data-a="join">Войти как гость и попасть в рейтинг</button>')+
+      '<p class="cl-m" aria-live="polite">'+esc(msg||"")+'</p></div>';
+  }
+  function load(msg){
+    if(!sb){rows=[];render("Рейтинг сейчас недоступен");return}
+    sb.from("leaderboard").select("user_id,name,score,level").order("score",{ascending:false}).limit(20).then(function(r){
+      rows=r.error?[]:r.data;render(r.error?"Не получилось загрузить рейтинг":msg);
+      var b=C.data.fishBest||0;
+      if(C.user&&b>0)sb.from("leaderboard").select("user_id",{count:"exact",head:true}).gt("score",b).then(function(x){
+        if(!x.error&&x.count!==null){rank=x.count+1;render(msg)}
+      });
+    });
+  }
+  m.addEventListener("click",function(e){
+    if(e.target===m){close();return}
+    var b=e.target.closest("[data-a]");if(!b)return;var a=b.dataset.a;
+    if(a==="close")close();
+    else if(a==="nick"){
+      var v=m.querySelector("input").value.trim().slice(0,16);
+      if(!v){render("Впиши ник");return}
+      C.data.name=v;C.save(true);
+      C.submitScore(C.data.fishBest,C.data.fishLevel).then(function(){load("Ник сохранён")});
+    }else if(a==="join"){
+      sb.auth.signInAnonymously().then(function(r){
+        if(r.error){render("Ошибка: "+r.error.message);return}
+        C.user=r.data.user;
+        return C.submitScore(C.data.fishBest||0,C.data.fishLevel||1).then(function(){load(C.data.fishBest>0?"Ты в рейтинге!":"Сыграй, чтобы попасть в таблицу")});
+      });
+    }
+  });
+  document.addEventListener("keydown",function k(e){if(!m.isConnected){document.removeEventListener("keydown",k);return}if(e.key==="Escape")close()});
+  render();load("");
+};
+C.openLogin=function(){
+  ensureCss();
   var m=document.createElement("div");m.className="cl-ov";document.body.appendChild(m);
   function close(){m.remove()}
   function render(msg){

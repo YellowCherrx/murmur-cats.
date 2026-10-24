@@ -19,14 +19,14 @@ canvas{flex:1;min-height:0;width:100%;display:block;touch-action:none;background
 h1{margin:0;font-size:2.2rem}
 p{margin:0;max-width:32ch;color:#e8defa}
 .go{font:inherit;font-weight:500;font-size:1.2rem;border:0;border-radius:999px;padding:14px 30px;background:var(--pink);color:var(--ink);cursor:pointer;display:inline-block;text-decoration:none}
-a.go{background:var(--soft)}
+a.go,.go.sec{background:var(--soft)}
 :focus-visible{outline:3px solid #fff;outline-offset:3px}
 </style></head>
 <body>
 <header><a href="index.html">← Главная</a><span id="sc">0</span><button class="snd" id="snd" aria-label="Выключить звук">🔊</button></header>
 <div class="bar"><i id="hp"></i></div>
 <canvas id="c"></canvas>
-<div class="ov" id="ov"><h1 id="t">Лови рыбок 🐟</h1><p id="d">Води котом пальцем и лови рыбок в такт музыке. Креветки 🦐 дают бонус. Промах по рыбке отнимает здоровье и комбо. Игра бесконечная: чем дольше играешь, тем быстрее и плотнее рыбки.</p><button class="go" id="go">Играть</button><a class="go" href="index.html">На главную</a></div>
+<div class="ov" id="ov"><h1 id="t">Лови рыбок 🐟</h1><p id="d">Води котом пальцем и лови рыбок в такт музыке. Креветки 🦐 дают бонус. Промах по рыбке отнимает здоровье и комбо. Игра бесконечная: чем дольше играешь, тем быстрее и плотнее рыбки.</p><button class="go" id="go">Играть</button><button class="go sec" id="rank">🏆 Рейтинг</button><a class="go" href="index.html">На главную</a></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="cloud.js"></script>
 <script>
@@ -100,7 +100,7 @@ function finish(){
   if(sg){sg.gain.cancelScheduledValues(0);sg.gain.value=0;sg=null}
   var cl=window.Cloud;if(cl)best=Math.max(best,cl.data.fishBest||0);
   if(score>best){best=score;try{localStorage.setItem("fishBest2",best)}catch(e){}}
-  if(cl){cl.data.fishBest=Math.max(cl.data.fishBest||0,score);cl.save(true)}
+  if(cl){if(score>=(cl.data.fishBest||0))cl.data.fishLevel=lvl;cl.data.fishBest=Math.max(cl.data.fishBest||0,score);cl.save(true);cl.submitScore(cl.data.fishBest,cl.data.fishLevel)}
   var acc=seen?Math.round(hits/seen*100):0;
   document.getElementById("t").textContent="Кот проголодался";
   document.getElementById("d").textContent="Уровень "+lvl+". Очки: "+score+". Рекорд: "+best+". Макс. комбо: "+maxc+". Поймано рыбок: "+hits+" из "+seen+" ("+acc+"%).";
@@ -187,6 +187,7 @@ addEventListener("keydown",function(e){if(e.key==="ArrowLeft")keys.l=1;if(e.key=
 addEventListener("keyup",function(e){if(e.key==="ArrowLeft")keys.l=0;if(e.key==="ArrowRight")keys.r=0;if(e.key==="Shift")keys.s=0});
 document.addEventListener("visibilitychange",function(){if(!AC||!run)return;if(document.hidden)AC.suspend();else AC.resume()});
 document.getElementById("go").addEventListener("click",start);
+document.getElementById("rank").addEventListener("click",function(){if(window.Cloud)Cloud.openBoard()});
 var sb=document.getElementById("snd");
 function paint(){sb.textContent=mute?"🔇":"🔊";sb.setAttribute("aria-label",mute?"Включить звук":"Выключить звук")}
 paint();
