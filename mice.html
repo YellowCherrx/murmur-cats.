@@ -21,14 +21,15 @@ main{flex:1;display:grid;place-items:center;padding:8px}
 .ov[hidden]{display:none}
 h1{margin:0;font-size:2.2rem}
 p{margin:0;max-width:30ch;color:#6b6890}
-button.go{font:inherit;font-weight:500;font-size:1.2rem;border:0;border-radius:999px;padding:14px 30px;background:var(--pink);color:var(--ink);cursor:pointer}
+.go{font:inherit;font-weight:500;font-size:1.2rem;border:0;border-radius:999px;padding:14px 30px;background:var(--pink);color:var(--ink);cursor:pointer;display:inline-block;text-decoration:none}
+a.go{background:var(--soft)}
 :focus-visible{outline:3px solid var(--ink);outline-offset:3px}
 @media (prefers-reduced-motion:reduce){.m{transition:none}}
 </style></head>
 <body>
 <header><a href="index.html">← Главная</a><span id="sc">Очки: 0</span><span id="tm">⏱ 30</span><button class="snd" id="snd" aria-label="Выключить звук">🔊</button></header>
 <main><div class="board" id="board"></div></main>
-<div class="ov" id="ov"><h1 id="t">Поймай мышку 🐭</h1><p id="d">Тапай по мышкам! Сыр 🧀 даёт 3 очка, а огурцов 🥒 кот боится: за них минус 2.</p><button class="go" id="go">Играть</button></div>
+<div class="ov" id="ov"><h1 id="t">Поймай мышку 🐭</h1><p id="d">Тапай по мышкам! Сыр 🧀 даёт 3 очка, а огурцов 🥒 кот боится: за них минус 2.</p><button class="go" id="go">Играть</button><a class="go" href="index.html">На главную</a></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="cloud.js"></script>
 <script>
