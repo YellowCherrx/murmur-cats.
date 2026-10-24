@@ -90,6 +90,22 @@ button.cat.on{border-color:var(--ink)}
 <script src="cloud.js?v=6"></script>
 <script src="tasks.js?v=1"></script>
 <script>
+var HATS={
+"🎀":'<g transform="translate(152 44) rotate(24)"><path d="M0 0 L-16 -11 Q-22 0 -16 11 Z" fill="#ff6fa5"/><path d="M0 0 L16 -11 Q22 0 16 11 Z" fill="#ff6fa5"/><circle r="5.5" fill="#ff3f86"/></g>',
+"🌸":'<g transform="translate(152 44)"><g fill="#fff" stroke="#ff8fb1" stroke-width="1.4"><circle cx="0" cy="-9" r="7"/><circle cx="8.5" cy="-3" r="7"/><circle cx="5" cy="7.5" r="7"/><circle cx="-5" cy="7.5" r="7"/><circle cx="-8.5" cy="-3" r="7"/></g><circle r="5" fill="#ffd166"/></g>',
+"🎓":'<g transform="rotate(-5 110 30)"><path d="M84 30 V44 Q110 55 136 44 V30 Z" fill="#3b3860"/><path d="M110 8 L160 26 L110 44 L60 26 Z" fill="#2d2a4a"/><path d="M110 26 L152 30 V50" stroke="#ffd166" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="152" cy="52" r="4.5" fill="#ffd166"/></g>',
+"🧢":'<g transform="rotate(-5 110 36)"><path d="M72 42 Q72 8 110 8 Q148 8 148 42 Z" fill="#4a8df6"/><path d="M118 38 Q170 30 170 44 Q150 46 118 46 Z" fill="#2f6fd6"/><circle cx="110" cy="9" r="4" fill="#2f6fd6"/><path d="M110 9 V40" stroke="#3a7ae0" stroke-width="2"/></g>',
+"👒":'<g transform="rotate(-4 110 36)"><ellipse cx="110" cy="38" rx="56" ry="10" fill="#f0cf84"/><path d="M82 36 Q82 6 110 6 Q138 6 138 36 Z" fill="#f7dfa0"/><rect x="82" y="26" width="56" height="7" fill="#ff8fb1"/></g>',
+"👑":'<g transform="rotate(-4 110 36)"><path d="M76 42 L80 14 L96 28 L110 8 L124 28 L140 14 L144 42 Z" fill="#ffd166"/><rect x="76" y="36" width="68" height="7" rx="2" fill="#f2b84b"/><circle cx="110" cy="30" r="4.5" fill="#ff5c8a"/><circle cx="92" cy="34" r="3" fill="#7be0c3"/><circle cx="128" cy="34" r="3" fill="#7be0c3"/></g>',
+"🎩":'<g transform="rotate(-6 110 36)"><ellipse cx="110" cy="38" rx="40" ry="7" fill="#2b2740"/><rect x="88" y="4" width="44" height="34" rx="4" fill="#2b2740"/><rect x="88" y="26" width="44" height="7" fill="#ff8fb1"/><rect x="94" y="8" width="5" height="16" rx="2.5" fill="#443f66"/></g>',
+"💎":'<g transform="translate(110 50)"><path d="M0 -14 L13 -4 L0 14 L-13 -4 Z" fill="#7be0e8"/><path d="M0 -14 L5 -4 L0 14 L-5 -4 Z" fill="#b8f3f6"/><path d="M-13 -4 H13" stroke="#4cc4d0" stroke-width="1.5"/></g>'
+};
+var HSC={"🎓":[1.2,110,40],"🧢":[1.2,110,40],"👒":[1.2,110,40],"👑":[1.25,110,40],"🎩":[1.2,110,40],"🎀":[1.35,152,44],"🌸":[1.3,152,44],"💎":[1.3,110,50]};
+function hatSVG(hat){
+  var g=HATS[hat],t=HSC[hat];
+  if(!g)return "";
+  return t?'<g transform="translate('+t[1]+' '+t[2]+') scale('+t[0]+') translate('+(-t[1])+' '+(-t[2])+')">'+g+'</g>':g;
+}
 function catSVG(c,withEyes,hat){
   var b=c.body,e=c.ear,m=c.mask||b,br=c.breed||"";
   var hid=withEyes?' id="head"':'',fid=withEyes?' id="face"':'';
@@ -126,7 +142,7 @@ function catSVG(c,withEyes,hat){
     s+='<path d="M110 36 V56 M92 40 L96 58 M128 40 L124 58" stroke="'+c.stripes+'" stroke-width="7" stroke-linecap="round"/>';
   }
   if(c.mask)s+=(br==="maine"?'<rect x="64" y="108" width="92" height="58" rx="28" fill="'+c.mask+'"/>':'<ellipse cx="110" cy="132" rx="46" ry="34" fill="'+c.mask+'"/>');
-  if(hat)s+='<text x="110" y="24" font-size="46" text-anchor="middle">'+hat+'</text>';
+  if(hat)s+=hatSVG(hat)||'<text x="110" y="24" font-size="46" text-anchor="middle">'+hat+'</text>';
   s+='<g'+fid+'>'+eyes+(br==="maine"?'<path d="M60 74 L100 84 M160 74 L120 84" stroke="#9a98bd" stroke-width="5" stroke-linecap="round" fill="none"/>':'')+
      '<ellipse cx="56" cy="120" rx="12" ry="7" fill="#ff8fb1" opacity=".5"/><ellipse cx="164" cy="120" rx="12" ry="7" fill="#ff8fb1" opacity=".5"/>'+
      (withEyes?'<g id="happy" style="display:none"><path d="M67 99 Q80 83 93 99 M127 99 Q140 83 153 99" stroke="#1d1b3a" stroke-width="5" fill="none" stroke-linecap="round"/></g>':'')+
