@@ -15,7 +15,7 @@ main{flex:1;display:grid;place-items:center;padding:8px}
 .board{display:grid;grid-template-columns:repeat(3,1fr);gap:3vmin;width:min(92vw,420px)}
 .hole{position:relative;aspect-ratio:1;border:0;background:none;padding:0;overflow:hidden;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none}
 .hole::before{content:"";position:absolute;left:6%;right:6%;bottom:6%;height:38%;border-radius:50%;background:#5b3f73}
-.m{position:absolute;left:0;right:0;bottom:16%;text-align:center;font-size:min(15vw,68px);line-height:1;transform:translateY(120%);transition:transform .1s;pointer-events:none}
+.m{position:absolute;left:0;right:0;bottom:16%;text-align:center;font-size:calc(min(92vw,420px)/var(--n,3)*.6);line-height:1;transform:translateY(120%);transition:transform .1s;pointer-events:none}
 .hole.up .m{transform:translateY(0)}
 .ov{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:12px;text-align:center;padding:24px;background:rgba(255,255,255,.93)}
 .ov[hidden]{display:none}
@@ -23,13 +23,17 @@ h1{margin:0;font-size:2.2rem}
 p{margin:0;max-width:30ch;color:#6b6890}
 .go{font:inherit;font-weight:500;font-size:1.2rem;border:0;border-radius:999px;padding:14px 30px;background:var(--pink);color:var(--ink);cursor:pointer;display:inline-block;text-decoration:none}
 a.go{background:var(--soft)}
+.dif{min-width:min(300px,80vw)}
+.dif[data-m=easy]{background:#7be0c3}
+.dif[data-m=hard]{background:#ffd166}
+.dif[data-m=insane]{background:#ff6b8b}
 :focus-visible{outline:3px solid var(--ink);outline-offset:3px}
 @media (prefers-reduced-motion:reduce){.m{transition:none}}
 </style></head>
 <body>
 <header><a href="index.html">← Главная</a><span id="sc">Очки: 0</span><span id="tm">⏱ 30</span><button class="snd" id="snd" aria-label="Выключить звук">🔊</button></header>
 <main><div class="board" id="board"></div></main>
-<div class="ov" id="ov"><h1 id="t">Поймай мышку 🐭</h1><p id="d">Тапай по мышкам! Сыр 🧀 даёт 3 очка, а огурцов 🥒 кот боится: за них минус 2.</p><button class="go" id="go">Играть</button><a class="go" href="index.html">На главную</a></div>
+<div class="ov" id="ov"><h1 id="t">Поймай мышку 🐭</h1><p id="d">Выбери сложность и тапай по мышкам! Сыр 🧀 даёт 3 очка, а огурцов 🥒 кот боится: за них минус 2. В «Невозможном» целых 25 норок, а промах по пустой тоже отнимает очко.</p><button class="go dif" data-m="easy">Лёгкий</button><button class="go dif" data-m="hard">Сложный</button><button class="go dif" data-m="insane">Невозможный</button><a class="go" href="index.html">На главную</a></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="cloud.js"></script>
 <script>
@@ -46,30 +50,45 @@ function tone(f1,f2,d,type,vol,delay){
   }catch(e){}
 }
 var ls=-1;
-var LEN=30,board=document.getElementById("board"),ov=document.getElementById("ov");
+var D={
+ easy:{n:9,cols:3,len:30,d0:1100,dmin:700,dr:12,s0:800,smin:450,sr:10,cuc:.12,che:.12,multi:0,mis:0},
+ hard:{n:9,cols:3,len:30,d0:800,dmin:450,dr:14,s0:550,smin:280,sr:9,cuc:.22,che:.1,multi:.15,mis:0},
+ insane:{n:25,cols:5,len:40,d0:760,dmin:480,dr:7,s0:340,smin:200,sr:4,cuc:.25,che:.08,multi:.6,mis:1}
+},NAMES={easy:"Лёгкий",hard:"Сложный",insane:"Невозможный"};
+var P=D.easy,mode="easy",LEN=30,board=document.getElementById("board"),ov=document.getElementById("ov");
 var K={mouse:{e:"🐭",p:1},cheese:{e:"🧀",p:3},cuc:{e:"🥒",p:-2}};
 var best=0;try{best=+localStorage.getItem("miceBest")||0}catch(e){}
 var holes=[],st=[],score=0,run=false,t0=0,next=0,timer=null;
-for(var i=0;i<9;i++){
-  (function(i){
-    var b=document.createElement("button");b.className="hole";b.setAttribute("aria-label","Норка "+(i+1));
-    b.innerHTML='<span class="m"></span>';
-    b.addEventListener("pointerdown",function(e){e.preventDefault();hit(i)});
-    board.appendChild(b);holes.push(b);st.push(null);
-  })(i);
+function build(n,cols){
+  board.innerHTML="";holes=[];st=[];
+  board.style.setProperty("--n",cols);
+  board.style.gridTemplateColumns="repeat("+cols+",1fr)";
+  board.style.gap=cols>3?"1.6vmin":"3vmin";
+  for(var k=0;k<n;k++){
+    (function(i){
+      var b=document.createElement("button");b.className="hole";b.setAttribute("aria-label","Норка "+(i+1));
+      b.innerHTML='<span class="m"></span>';
+      b.addEventListener("pointerdown",function(e){e.preventDefault();hit(i)});
+      board.appendChild(b);holes.push(b);st.push(null);
+    })(k);
+  }
 }
+build(9,3);
 function vib(n){try{navigator.vibrate&&navigator.vibrate(n)}catch(e){}}
-function hide(i){holes[i].classList.remove("up");st[i]=null}
+function hide(i){if(!holes[i])return;holes[i].classList.remove("up");st[i]=null}
 function spawn(el,now){
-  var free=[];for(var i=0;i<9;i++)if(!st[i])free.push(i);
+  var free=[];for(var i=0;i<holes.length;i++)if(!st[i])free.push(i);
   if(!free.length)return;
-  var i=free[Math.floor(Math.random()*free.length)],r=Math.random(),k=r<.12?"cheese":r<.28?"cuc":"mouse";
-  var d=Math.max(500,1100-el*20)*(k==="cheese"?.75:1);
+  var i=free[Math.floor(Math.random()*free.length)],r=Math.random(),k=r<P.che?"cheese":r<P.che+P.cuc?"cuc":"mouse";
+  var d=Math.max(P.dmin,P.d0-el*P.dr)*(k==="cheese"?.75:1);
   holes[i].querySelector(".m").textContent=K[k].e;
   holes[i].classList.add("up");st[i]={k:k,end:now+d,done:false};
 }
 function hit(i){
-  var s=st[i];if(!run||!s||s.done)return;
+  if(!run)return;
+  var s=st[i];
+  if(!s){if(P.mis){score=Math.max(0,score-1);document.getElementById("sc").textContent="Очки: "+score;vib(30);tone(180,120,.1,"triangle",.15)}return}
+  if(s.done)return;
   s.done=true;score=Math.max(0,score+K[s.k].p);
   if(s.k==="mouse"){tone(1500,2400,.07,"square",.1);tone(1900,1300,.08,"square",.08,.06)}else if(s.k==="cheese"){tone(988,988,.1,"sine",.2);tone(1319,1319,.22,"sine",.2,.1)}else{tone(220,70,.25,"triangle",.3)}
   holes[i].querySelector(".m").textContent=s.k==="cuc"?"💢":"⭐";
@@ -78,13 +97,14 @@ function hit(i){
 }
 function tick(){
   var now=Date.now(),el=(now-t0)/1000,left=Math.max(0,LEN-el);
-  if(now>=next){spawn(el,now);next=now+Math.max(260,720-el*14)}
-  for(var i=0;i<9;i++)if(st[i]&&!st[i].done&&now>st[i].end)hide(i);
+  if(now>=next){spawn(el,now);if(Math.random()<P.multi)spawn(el,now);next=now+Math.max(P.smin,P.s0-el*P.sr)}
+  for(var i=0;i<holes.length;i++)if(st[i]&&!st[i].done&&now>st[i].end)hide(i);
   var c=Math.ceil(left);document.getElementById("tm").textContent="⏱ "+c;if(c!==ls){ls=c;if(c<=3&&c>0)tone(900,900,.06,"sine",.12)}
   if(left<=0)finish();
 }
-function start(){
-  for(var i=0;i<9;i++)hide(i);
+function start(m){
+  mode=m;P=D[m];LEN=P.len;document.getElementById("tm").textContent="⏱ "+LEN;build(P.n,P.cols);
+  for(var i=0;i<holes.length;i++)hide(i);
   score=0;run=true;ls=-1;t0=Date.now();next=t0+400;ov.hidden=true;tone(523,784,.12,"sine",.2);tone(784,1047,.16,"sine",.2,.12);
   document.getElementById("sc").textContent="Очки: 0";
   clearInterval(timer);timer=setInterval(tick,50);
@@ -92,15 +112,18 @@ function start(){
 function finish(){
   run=false;clearInterval(timer);
   tone(523,523,.12,"sine",.2);tone(659,659,.12,"sine",.2,.12);tone(784,784,.12,"sine",.2,.24);tone(1047,1047,.3,"sine",.2,.36);
-  for(var i=0;i<9;i++)hide(i);
-  var cl=window.Cloud;if(cl)best=Math.max(best,cl.data.miceBest||0);
-  if(score>best){best=score;try{localStorage.setItem("miceBest",best)}catch(e){}}
-  if(cl){cl.data.miceBest=Math.max(cl.data.miceBest||0,score);cl.save(true)}
+  for(var i=0;i<holes.length;i++)hide(i);
+  var key="miceBest_"+mode,b=bestOf(mode),cl=window.Cloud;
+  if(score>b){b=score;try{localStorage.setItem(key,b)}catch(e){}}
+  if(cl){cl.data[key]=Math.max(cl.data[key]||0,score);cl.data.miceBest=Math.max(cl.data.miceBest||0,score);cl.save(true)}
   document.getElementById("t").textContent="Время вышло!";
-  document.getElementById("d").textContent="Твои очки: "+score+". Рекорд: "+best+".";
-  document.getElementById("go").textContent="Ещё раз";ov.hidden=false;
+  document.getElementById("d").textContent=NAMES[mode]+". Твои очки: "+score+". Рекорд: "+b+".";
+  labels();ov.hidden=false;
 }
-document.getElementById("go").addEventListener("click",start);
+function bestOf(m){var v=0,cl=window.Cloud;try{v=+localStorage.getItem("miceBest_"+m)||0}catch(e){}if(cl)v=Math.max(v,cl.data["miceBest_"+m]||0);return v}
+function labels(){document.querySelectorAll(".dif").forEach(function(b){var m=b.dataset.m,v=bestOf(m);b.textContent=NAMES[m]+(v?" · рекорд "+v:"")})}
+document.querySelectorAll(".dif").forEach(function(b){b.addEventListener("click",function(){start(b.dataset.m)})});
+labels();if(window.Cloud)Cloud.onChange(labels);
 var sb=document.getElementById("snd");
 function paint(){sb.textContent=mute?"🔇":"🔊";sb.setAttribute("aria-label",mute?"Включить звук":"Выключить звук")}
 paint();
