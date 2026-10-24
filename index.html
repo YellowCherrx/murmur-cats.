@@ -63,6 +63,7 @@ button.cat.on{border-color:var(--ink)}
 <p class="breed" id="breed"></p>
 <p class="hint">Нажми на кота, чтобы погладить</p>
 <p class="count" id="count" aria-live="polite"></p>
+<button class="open alt" id="board" style="margin-top:10px">💗 Рейтинг ласковых</button>
 </main>
 <div class="overlay" id="modal" hidden>
 <div class="panel" role="dialog" aria-modal="true" aria-labelledby="ct">
@@ -234,7 +235,7 @@ document.getElementById("grid").innerHTML=cats.map(function(k){
 }).join("");
 var cards=document.querySelectorAll("button.cat");
 
-function updCount(){var n=pets[cur];countEl.textContent=n?("Поглаживаний: "+n+(n>=10?" — кот в восторге":"")):"";}
+function updCount(){countEl.textContent="Всего поглаживаний: "+(CL.data.pets||0).toLocaleString("ru-RU")}
 function setCat(i){
   cur=i;
   stage.innerHTML=catSVG(cats[i].c,true,CL.data.hat);
@@ -258,7 +259,7 @@ window.addEventListener("pointermove",function(e){look(e.clientX,e.clientY)});
 window.addEventListener("pointerdown",function(e){look(e.clientX,e.clientY)});
 
 stage.addEventListener("click",function(){
-  pets[cur]++;updCount();CL.data.pets=(CL.data.pets||0)+1;CL.save();
+  pets[cur]++;CL.data.pets=(CL.data.pets||0)+1;CL.save();updCount();if(CL.syncPets)CL.syncPets();
   var s=stage.querySelector("svg");
   s.animate([{transform:"scale(1)"},{transform:"scale(1.04,.96)"},{transform:"scale(1)"}],{duration:300});
   purr();burst();
@@ -287,9 +288,10 @@ document.getElementById("topen").addEventListener("click",openT);
 document.getElementById("tclose").addEventListener("click",closeT);
 tm.addEventListener("click",function(e){if(e.target===tm)closeT()});
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!tm.hidden)closeT()});
+document.getElementById("board").addEventListener("click",function(){if(CL.openBoard)CL.openBoard("pets")});
 document.getElementById("aopen").addEventListener("click",function(){CL.openLogin()});
 var lastHat=CL.data.hat;
-CL.onChange(function(){renderTasks();if(CL.data.hat!==lastHat){lastHat=CL.data.hat;setCat(cur)}});
+CL.onChange(function(){renderTasks();updCount();if(CL.data.hat!==lastHat){lastHat=CL.data.hat;setCat(cur)}});
 var games=[
  {n:"Лови рыбок",e:"🐟",d:"Рыбки падают, кот ловит",f:"fish.html"},
  {n:"Поймай мышку",e:"🐭",d:"Мышки лезут из норок",f:"mice.html"}

@@ -28,7 +28,7 @@ C.save=function(now){
 function pull(){
   sb.from("progress").select("data").maybeSingle().then(function(r){
     if(r.error)return;
-    C.data=merge(C.data,r.data&&r.data.data);C.save(true);emit();
+    C.data=merge(C.data,r.data&&r.data.data);C.save(true);emit();if(C.syncPets)C.syncPets();
   });
 }
 function setUser(u){
@@ -50,7 +50,7 @@ function ensureCss(){
     ".cl-x{position:absolute;right:12px;top:12px;width:36px;height:36px;border:0;border-radius:50%;background:#f6f1fd;cursor:pointer;font-size:1rem}"+
     ".cl-b{font:inherit;font-weight:500;border:0;border-radius:999px;padding:12px 18px;background:#ff8fb1;color:#1d1b3a;cursor:pointer}"+
     ".cl-g{background:#f6f1fd}.cl-i{font:inherit;padding:12px 14px;border:2px solid #ece7f7;border-radius:14px}.cl-m{min-height:1.3em}"+
-    ".cl-l{max-height:46vh;overflow:auto;display:grid;gap:2px;margin:0;padding:0;list-style:none}.cl-r{display:grid;grid-template-columns:2.4rem 1fr auto;gap:8px;padding:6px 8px;border-radius:12px;color:#1d1b3a}.cl-r.me{background:#f6f1fd;font-weight:700}";
+    ".cl-l{max-height:46vh;overflow:auto;display:grid;gap:2px;margin:0;padding:0;list-style:none}.cl-r{display:grid;grid-template-columns:2.4rem 1fr auto;gap:8px;padding:6px 8px;border-radius:12px;color:#1d1b3a}.cl-r.me{background:#f6f1fd;font-weight:700}.cl-t{display:grid;grid-template-columns:1fr 1fr;gap:8px}";
     document.head.appendChild(st);
   }
 }
@@ -64,48 +64,70 @@ C.submitScore=function(score,level){
     if(r&&r.error){C.status="Не удалось отправить в рейтинг";emit()}
   });
 };
-C.openBoard=function(){
+var pt=null;
+C.submitPets=function(){
+  if(!sb||!C.user||!(C.data.pets>0))return Promise.resolve();
+  return Promise.resolve(sb.rpc("submit_pets",{p_name:C.nick(),p_pets:Math.floor(C.data.pets)})).then(function(r){
+    if(r&&r.error){C.status="Не удалось отправить в рейтинг";emit()}
+  });
+};
+C.syncPets=function(now){clearTimeout(pt);pt=setTimeout(function(){C.submitPets()},now?0:6000)};
+C.openBoard=function(kind){
   ensureCss();
   var m=document.createElement("div");m.className="cl-ov";document.body.appendChild(m);
-  var rows=null,rank=null;
+  var k=kind==="pets"?"pets":"fish",rows=null,rank=null,req=0;
+  var F={
+    fish:{col:"user_id,name,score,level",key:"score",my:function(){return C.data.fishBest||0},
+      line:function(r){return esc(r.name)+" · ур. "+(r.level||1)},val:function(r){return r.score}},
+    pets:{col:"user_id,name,pets",key:"pets",my:function(){return C.data.pets||0},
+      line:function(r){return esc(r.name)},val:function(r){return r.pets.toLocaleString("ru-RU")+" 💗"}}
+  };
   function close(){m.remove()}
   function render(msg){
-    var u=C.user,me=u&&u.id;
-    m.innerHTML='<div class="cl-p" role="dialog" aria-modal="true" aria-label="Рейтинг"><button class="cl-x" data-a="close" aria-label="Закрыть">✕</button><h2>🏆 Рейтинг: рыбки</h2>'+
-      (rows===null?'<p>Загружаю…</p>':rows.length?'<ol class="cl-l">'+rows.map(function(r,i){return '<li class="cl-r'+(r.user_id===me?' me':'')+'"><span>#'+(i+1)+'</span><span>'+esc(r.name)+' · ур. '+(r.level||1)+'</span><span>'+r.score+'</span></li>'}).join("")+'</ol>':'<p>Пока никого нет. Стань первым!</p>')+
-      (u?'<p>Твой рекорд: '+(C.data.fishBest||0)+(rank?' · место '+rank:'')+'</p><input class="cl-i" maxlength="16" value="'+esc(C.nick())+'" aria-label="Ник"><button class="cl-b" data-a="nick">Сменить ник</button>':
+    var u=C.user,me=u&&u.id,f=F[k];
+    m.innerHTML='<div class="cl-p" role="dialog" aria-modal="true" aria-label="Рейтинг"><button class="cl-x" data-a="close" aria-label="Закрыть">✕</button><h2>🏆 Рейтинг</h2>'+
+      '<div class="cl-t"><button class="cl-b'+(k==="fish"?'':' cl-g')+'" data-a="tab" data-k="fish">🐟 Рыбки</button><button class="cl-b'+(k==="pets"?'':' cl-g')+'" data-a="tab" data-k="pets">💗 Ласковые</button></div>'+
+      (rows===null?'<p>Загружаю…</p>':rows.length?'<ol class="cl-l">'+rows.map(function(r,i){return '<li class="cl-r'+(r.user_id===me?' me':'')+'"><span>#'+(i+1)+'</span><span>'+f.line(r)+'</span><span>'+f.val(r)+'</span></li>'}).join("")+'</ol>':'<p>Пока никого нет. Стань первым!</p>')+
+      (u?'<p>Твой результат: '+f.my().toLocaleString("ru-RU")+(rank?' · место '+rank:'')+'</p><input class="cl-i" maxlength="16" value="'+esc(C.nick())+'" aria-label="Ник"><button class="cl-b cl-g" data-a="nick">Сменить ник</button>':
          '<p>Чтобы попасть в рейтинг, нужен аккаунт.</p><button class="cl-b" data-a="join">Войти как гость и попасть в рейтинг</button>')+
       '<p class="cl-m" aria-live="polite">'+esc(msg||"")+'</p></div>';
   }
   function load(msg){
     if(!sb){rows=[];render("Рейтинг сейчас недоступен");return}
-    sb.from("leaderboard").select("user_id,name,score,level").order("score",{ascending:false}).limit(20).then(function(r){
+    var my=++req,f=F[k];rows=null;rank=null;render();
+    var go=(k==="pets"&&C.user)?C.submitPets():Promise.resolve();
+    go.then(function(){
+      return sb.from("leaderboard").select(f.col).gt(f.key,0).order(f.key,{ascending:false}).limit(20);
+    }).then(function(r){
+      if(my!==req)return;
       rows=r.error?[]:r.data;render(r.error?"Не получилось загрузить рейтинг":msg);
-      var b=C.data.fishBest||0;
-      if(C.user&&b>0)sb.from("leaderboard").select("user_id",{count:"exact",head:true}).gt("score",b).then(function(x){
-        if(!x.error&&x.count!==null){rank=x.count+1;render(msg)}
+      var mine=f.my();
+      if(C.user&&mine>0)sb.from("leaderboard").select("user_id",{count:"exact",head:true}).gt(f.key,mine).then(function(x){
+        if(my===req&&!x.error&&x.count!==null){rank=x.count+1;render(msg)}
       });
     });
   }
+  function sendAll(){return Promise.all([C.submitScore(C.data.fishBest||0,C.data.fishLevel||1),C.submitPets()])}
   m.addEventListener("click",function(e){
     if(e.target===m){close();return}
     var b=e.target.closest("[data-a]");if(!b)return;var a=b.dataset.a;
     if(a==="close")close();
+    else if(a==="tab"){k=b.dataset.k;load("")}
     else if(a==="nick"){
       var v=m.querySelector("input").value.trim().slice(0,16);
       if(!v){render("Впиши ник");return}
       C.data.name=v;C.save(true);
-      C.submitScore(C.data.fishBest,C.data.fishLevel).then(function(){load("Ник сохранён")});
+      sendAll().then(function(){load("Ник сохранён")});
     }else if(a==="join"){
       sb.auth.signInAnonymously().then(function(r){
         if(r.error){render("Ошибка: "+r.error.message);return}
         C.user=r.data.user;
-        return C.submitScore(C.data.fishBest||0,C.data.fishLevel||1).then(function(){load(C.data.fishBest>0?"Ты в рейтинге!":"Сыграй, чтобы попасть в таблицу")});
+        return sendAll().then(function(){load("Ты в рейтинге!")});
       });
     }
   });
-  document.addEventListener("keydown",function k(e){if(!m.isConnected){document.removeEventListener("keydown",k);return}if(e.key==="Escape")close()});
-  render();load("");
+  document.addEventListener("keydown",function kk(e){if(!m.isConnected){document.removeEventListener("keydown",kk);return}if(e.key==="Escape")close()});
+  load("");
 };
 C.openLogin=function(){
   ensureCss();
